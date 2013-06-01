@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+# coding=UTF-8
+
+import os
+import tarfile
+import sys
+from collections import defaultdict
+from ddanalysis import (DDAnalyzerError, load_knowledgebase)
+
+def analyze(dumpdirnames, knowledge_base, out):
+    result = defaultdict(list)
+    orphans = []
+    try:
+        for name, size in dumpdirnames:
+            out.write("{0} : {1}\n".format(name, size))
+            markers = {}
+            try:
+                problem = knowledge_base.proceed_dump_dir(name, markers)
+                out.write("\n")
+            except DDAnalyzerError as ex:
+                out.write("{0}\n\n".format(str(ex)))
+                continue
+            except tarfile.ReadError as ex:
+                out.write("Cannot read {0}: {1}\n\n".format(name, str(ex)))
+                continue
+
+            if problem:
+                result[(problem[1], problem[0])].append((name, problem[2]))
+            else:
+                orphans.append((name, markers))
+    except KeyboardInterrupt as ex:
+        pass
+
+    for key in result:
+        out.write("{0}    [{1}]\n".format(key[0], len(result[key])))
+        for dumpdir, log in result[key]:
+            out.write("    {0}\n".format(dumpdir))
+            for line in log:
+                out.write("        {0}\n".format(line))
+        out.write("\n")
+
+    if orphans:
+        out.write("Unknown\n")
+        for (dumpdir, result) in orphans:
+            out.write("    {0}\n".format(dumpdir))
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        DDLOCATION = os.getcwd()
+
+        DUMPDIRS = ((dir_entry,
+                     os.path.getsize(full_path))
+                        for dir_entry, full_path
+                        in map(lambda base_name: (base_name,
+                                os.path.join(DDLOCATION,
+                                    base_name)),
+                                os.listdir(DDLOCATION)))
+    else:
+        DUMPDIRS = ((dir_entry,
+                     os.path.getsize(full_path))
+                        for dir_entry, full_path
+                        in map(lambda base_name: (base_name,
+                                os.path.join(os.getcwd(),
+                                    base_name)),
+                                sys.argv[1:]))
+
+    DUMPDIRS = sorted(DUMPDIRS, key=lambda dentry: dentry[0])
+    analyze(DUMPDIRS, load_knowledgebase(), sys.stdout)
