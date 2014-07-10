@@ -1,4 +1,5 @@
 import os
+import zlib
 from ddanalysis.knowledgebase import DDAnalyzer, DDAnalyzerError, DDPredicate
 
 
@@ -20,6 +21,8 @@ class DDContentAnalyzer(DDAnalyzer):
                     raise DDAnalyzerError("Not a file '{0}'".format(mmbr.name))
                 else:
                     files.append((mmbr.name, mmbr.size))
+        except zlib.error as ex:
+            raise DDAnalyzerError("{0}".format(str(ex)))
         except IOError as ex:
             raise DDAnalyzerError("{0}".format(str(ex)))
 

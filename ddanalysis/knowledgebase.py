@@ -14,6 +14,9 @@ class DDPredicate(object):
     def or_this(self, other):
         return DDPredicateOR(self, other)
 
+    def not_(self):
+        return DDPredicateNOT(self)
+
 
 class DDPredicateAND(DDPredicate):
 
@@ -52,6 +55,24 @@ class DDPredicateOR(DDPredicate):
         res, log = self._lhs.satisfied_by(markers)
         if not res:
             res, log = self._rhs.satisfied_by(markers)
+
+        return (res, log)
+
+
+class DDPredicateNOT(DDPredicate):
+
+    def __init__(self, lhs):
+        super(DDPredicateNOT, self).__init__()
+
+        self._lhs = lhs
+
+    @property
+    def name(self):
+        return "NOT {0}".format(self._lhs.name)
+
+    def satisfied_by(self, markers):
+        res, log = self._lhs.satisfied_by(markers)
+        res = not res
 
         return (res, log)
 
